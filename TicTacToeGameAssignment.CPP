@@ -1,85 +1,98 @@
 #include <iostream>
-#include <array>
+#include <vector>
+#include <stdexcept>
 
-// Initialize the game board
-std::array<std::array<char, 3>, 3> board = { { { '1', '2', '3' }, { '4', '5', '6' }, { '7', '8', '9' } } };
+class TicTacToe {
+private:
+    std::vector<std::vector<char>> board;
+    int size;
+    char currentPlayer;
 
-// Function to print the game board
-void printBoard() {
-    for (const auto &row : board) {
-        for (const auto &cell : row) {
-            std::cout << cell << ' ';
+public:
+    TicTacToe(int n = 3) : size(n), currentPlayer('X'), board(n, std::vector<char>(n, '-')) {}
+
+    void printBoard() const {
+        for (const auto &row : board) {
+            for (const auto &cell : row) {
+                std::cout << cell << ' ';
+            }
+            std::cout << '\n';
         }
         std::cout << '\n';
     }
-}
 
-// Function to update the game board
-void updateBoard(int move, char player) {
-    int row = (move - 1) / 3;
-    int col = (move - 1) % 3;
-    board[row][col] = player;
-}
+    void makeMove(int move) {
+        if (move < 1 || move > size * size) {
+            throw std::out_of_range("Move must be within valid range");
+        }
+        int row = (move - 1) / size;
+        int col = (move - 1) % size;
+        if (board[row][col] != '-') {
+            throw std::invalid_argument("Cell is already occupied");
+        }
+        board[row][col] = currentPlayer;
+    }
 
-// Function to check if the game board is complete
-bool check_board_complete() {
-    for (const auto &row : board) {
-        for (const auto &cell : row) {
-            if (cell != 'X' && cell != 'O') {
-                return false;
+    bool isComplete() const {
+        for (const auto &row : board) {
+            for (char cell : row) {
+                if (cell == '-') return false;
             }
         }
-    }
-    return true;
-}
-
-// Function to check if a player has won
-bool check_win() {
-    // Check rows and columns for a win
-    for (int i = 0; i < 3; i++) {
-        if (board[i][0] == board[i][1] && board[i][1] == board[i][2])
-            return true;
-        if (board[0][i] == board[1][i] && board[1][i] == board[2][i])
-            return true;
+        return true;
     }
 
-    // Check diagonals for a win
-    if (board[0][0] == board[1][1] && board[1][1] == board[2][2])
-        return true;
-    if (board[0][2] == board[1][1] && board[1][1] == board[2][0])
-        return true;
+    bool checkWin() const {
+        // Check rows, columns and diagonals
+        int countDiag1 = 0, countDiag2 = 0;
+        for (int i = 0; i < size; ++i) {
+            int countRow = 0, countCol = 0;
+            for (int j = 0; j < size; ++j) {
+                if (board[i][j] == currentPlayer) ++countRow;
+                if (board[j][i] == currentPlayer) ++countCol;
+            }
+            if (countRow == size || countCol == size) return true;
 
-    return false;
-}
+            if (board[i][i] == currentPlayer) ++countDiag1;
+            if (board[i][size - i - 1] == currentPlayer) ++countDiag2;
+        }
+        if (countDiag1 == size || countDiag2 == size) return true;
 
-// Function to get the next player's turn
-char next_turn(char current_player) {
-    return (current_player == 'X') ? 'O' : 'X';
-}
+        return false;
+    }
+
+    void nextPlayer() {
+        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+    }
+
+    char getCurrentPlayer() const {
+        return currentPlayer;
+    }
+};
 
 int main() {
-    char player_x = 'X';
-    char player_y = 'O';
-    char turn = player_x;
-    int move;
+    TicTacToe game;
     bool hasWinner = false;
-    bool is_game_over = false;
 
-    do {
-        printBoard();
-        std::cout << "Player " << turn << ", enter your move: ";
-        std::cin >> move;
-        updateBoard(move, turn);
-        printBoard();
-        hasWinner = check_win();
-        if (!hasWinner) {
-            is_game_over = check_board_complete();
+    while (!game.isComplete() && !hasWinner) {
+        game.printBoard();
+        int move;
+        std::cout << "Player " << game.getCurrentPlayer() << ", enter your move: ";
+        try {
+            std::cin >> move;
+            game.makeMove(move);
+            hasWinner = game.checkWin();
+            if (!hasWinner) {
+                game.nextPlayer();
+            }
+        } catch (const std::exception& e) {
+            std::cout << "Error: " << e.what() << '\n';
         }
-        turn = next_turn(turn);
-    } while (!hasWinner && !is_game_over);
+    }
 
+    game.printBoard();
     if (hasWinner) {
-        std::cout << "Player " << next_turn(turn) << " wins!\n";
+        std::cout << "Player " << game.getCurrentPlayer() << " wins!\n";
     } else {
         std::cout << "It's a draw.\n";
     }
